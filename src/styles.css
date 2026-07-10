@@ -73,7 +73,7 @@ button {
 .screen {
   height: 100%;
   overflow: hidden;
-  padding: calc(16px + env(safe-area-inset-top)) 18px calc(104px + env(safe-area-inset-bottom));
+  padding: calc(14px + env(safe-area-inset-top)) 18px calc(98px + env(safe-area-inset-bottom));
 }
 
 .page {
@@ -86,7 +86,7 @@ button {
 }
 
 .home-page {
-  gap: 12px;
+  gap: 10px;
 }
 
 .app-header {
@@ -120,7 +120,7 @@ h2 {
 }
 
 h1 {
-  font-size: 32px;
+  font-size: 30px;
   font-weight: 800;
   line-height: 1.04;
   letter-spacing: -0.03em;
@@ -239,9 +239,10 @@ h2 {
 
 .balance-card {
   min-height: 0;
-  padding: 20px;
+  flex: 0 0 auto;
+  padding: 18px;
   border: 1px solid var(--hairline);
-  border-radius: 32px;
+  border-radius: 30px;
   color: var(--ink);
   background: rgba(255, 255, 255, 0.72);
   box-shadow: var(--shadow-card);
@@ -249,7 +250,7 @@ h2 {
   -webkit-backdrop-filter: blur(28px) saturate(1.18);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 .year-card {
@@ -308,8 +309,8 @@ h2 {
 }
 
 .balance-card > strong {
-  margin-top: 14px;
-  font-size: 46px;
+  margin-top: 12px;
+  font-size: 43px;
   font-weight: 800;
   line-height: 0.98;
   letter-spacing: -0.055em;
@@ -318,14 +319,14 @@ h2 {
 .mini-ledger {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 18px;
+  gap: 10px;
+  margin-top: 14px;
 }
 
 .mini-ledger div {
-  padding: 14px;
+  padding: 11px;
   border: 1px solid var(--hairline);
-  border-radius: 22px;
+  border-radius: 18px;
   background: rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(18px) saturate(1.12);
   -webkit-backdrop-filter: blur(18px) saturate(1.12);
@@ -333,26 +334,26 @@ h2 {
 
 .mini-ledger span {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .mini-ledger b {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 800;
   letter-spacing: -0.02em;
 }
 
 .budget-strip {
-  margin-top: 12px;
-  padding: 12px;
+  margin-top: 10px;
+  padding: 10px;
   border: 1px solid var(--hairline);
-  border-radius: 22px;
+  border-radius: 18px;
   background: rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(18px) saturate(1.12);
   -webkit-backdrop-filter: blur(18px) saturate(1.12);
   display: grid;
-  grid-template-columns: 1fr 94px;
-  gap: 12px;
+  grid-template-columns: 1fr 84px;
+  gap: 8px;
   overflow: hidden;
 }
 
@@ -377,20 +378,20 @@ h2 {
 .budget-copy strong {
   display: block;
   margin-top: 5px;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 800;
 }
 
 .budget-copy p {
-  margin-top: 5px;
+  margin-top: 3px;
   color: var(--muted);
   font-size: 12px;
-  line-height: 1.55;
+  line-height: 1.35;
 }
 
 .budget-input input {
-  height: 40px;
-  margin-top: 6px;
+  height: 36px;
+  margin-top: 5px;
   border: 1px solid var(--hairline);
   border-radius: 15px;
   color: var(--ink);
@@ -409,7 +410,7 @@ h2 {
 
 .budget-track {
   grid-column: 1 / -1;
-  height: 7px;
+  height: 6px;
   overflow: hidden;
   border-radius: 999px;
   background: rgba(60, 60, 67, 0.12);
@@ -432,18 +433,19 @@ h2 {
 }
 
 .quick-entry {
-  padding: 14px;
-  border-radius: 28px;
+  flex: 0 0 auto;
+  padding: 12px;
+  border-radius: 26px;
 }
 
 .quick-entry label {
   display: block;
-  margin: 0 0 12px 2px;
+  margin: 0 0 8px 2px;
 }
 
 .quick-entry-box {
-  min-height: 60px;
-  padding: 7px;
+  min-height: 54px;
+  padding: 6px;
   border: 1px solid var(--hairline);
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.58);
@@ -454,7 +456,7 @@ h2 {
 }
 
 .quick-entry-box input {
-  height: 46px;
+  height: 42px;
   margin: 0;
   border: 0;
   border-radius: 16px;
@@ -469,7 +471,7 @@ h2 {
 
 .quick-entry-box button {
   min-width: 72px;
-  height: 46px;
+  height: 42px;
   border: 0;
   border-radius: 16px;
   color: white;
@@ -486,7 +488,7 @@ h2 {
   display: flex;
   gap: 9px;
   overflow-x: auto;
-  padding: 14px 2px 0;
+  padding: 10px 2px 0;
   scrollbar-width: none;
 }
 
@@ -496,7 +498,7 @@ h2 {
 
 .quick-hints button {
   flex: 0 0 auto;
-  min-height: 35px;
+  min-height: 32px;
   padding: 0 13px;
   border: 1px solid var(--hairline);
   border-radius: 999px;
@@ -509,6 +511,7 @@ h2 {
 .home-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  flex: 0 0 auto;
   gap: 12px;
 }
 

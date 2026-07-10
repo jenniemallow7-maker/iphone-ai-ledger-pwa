@@ -32,6 +32,8 @@
 html,
 body,
 #root {
+  position: fixed;
+  inset: 0;
   width: 100%;
   height: 100%;
   margin: 0;
@@ -40,8 +42,6 @@ body,
 }
 
 body {
-  position: fixed;
-  inset: 0;
   width: 100%;
   height: 100vh;
   height: 100dvh;
@@ -61,18 +61,24 @@ button {
 }
 
 .app-shell {
+  position: fixed;
+  inset: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
   max-width: 480px;
   height: 100vh;
   height: 100dvh;
-  margin: 0 auto;
+  margin: 0;
   background: var(--bg);
-  position: relative;
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 .screen {
   height: 100%;
   overflow: hidden;
+  overscroll-behavior: none;
   padding: calc(14px + env(safe-area-inset-top)) 18px calc(98px + env(safe-area-inset-bottom));
 }
 
@@ -83,10 +89,22 @@ button {
   flex-direction: column;
   gap: 16px;
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 .home-page {
   gap: 10px;
+}
+
+.add-page {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.add-page::-webkit-scrollbar {
+  display: none;
 }
 
 .app-header {
@@ -488,6 +506,8 @@ h2 {
   display: flex;
   gap: 9px;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 10px 2px 0;
   scrollbar-width: none;
 }
@@ -553,6 +573,10 @@ h2 {
 }
 
 .home-page .entry-list {
+  flex: 1;
+}
+
+.stats-list {
   flex: 1;
 }
 

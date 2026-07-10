@@ -829,3 +829,88 @@ select:focus {
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.04);
   }
 }
+
+@media (min-width: 410px) and (min-height: 890px) {
+  .screen {
+    padding: calc(20px + env(safe-area-inset-top)) 20px calc(108px + env(safe-area-inset-bottom));
+  }
+
+  .page {
+    gap: 18px;
+  }
+
+  .home-page {
+    gap: 14px;
+  }
+
+  h1 {
+    font-size: 34px;
+  }
+
+  .balance-card {
+    padding: 22px;
+    border-radius: 32px;
+  }
+
+  .balance-card > strong {
+    margin-top: 16px;
+    font-size: 50px;
+  }
+
+  .mini-ledger {
+    gap: 12px;
+    margin-top: 18px;
+  }
+
+  .mini-ledger div {
+    padding: 13px;
+    border-radius: 20px;
+  }
+
+  .mini-ledger b {
+    font-size: 18px;
+  }
+
+  .budget-strip {
+    margin-top: 14px;
+    padding: 12px;
+    border-radius: 20px;
+    grid-template-columns: 1fr 94px;
+    gap: 10px;
+  }
+
+  .budget-copy p {
+    line-height: 1.5;
+  }
+
+  .budget-input input {
+    height: 38px;
+  }
+
+  .quick-entry {
+    padding: 15px;
+    border-radius: 28px;
+  }
+
+  .quick-entry label {
+    margin-bottom: 10px;
+  }
+
+  .quick-entry-box {
+    min-height: 58px;
+    padding: 7px;
+  }
+
+  .quick-entry-box input,
+  .quick-entry-box button {
+    height: 44px;
+  }
+
+  .quick-hints {
+    padding-top: 12px;
+  }
+
+  .quick-hints button {
+    min-height: 34px;
+  }
+}

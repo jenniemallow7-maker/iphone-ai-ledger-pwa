@@ -445,29 +445,39 @@ span.expense,
 
 .quick-entry {
   flex: 0 0 auto;
-  padding: 12px;
+  padding: 14px;
   border-radius: 26px;
 }
 
-.quick-entry label {
-  display: block;
-  margin: 0 0 8px 2px;
+.quick-entry-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 2px 8px;
+}
+
+.quick-entry-heading label {
+  margin: 0;
+}
+
+.quick-entry-heading span {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .quick-entry-box {
-  min-height: 54px;
+  min-height: 50px;
   padding: 6px;
   border: 1px solid var(--hairline);
-  border-radius: 22px;
+  border-radius: 18px;
   background: rgba(255, 255, 255, 0.58);
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 8px;
 }
 
 .quick-entry-box input {
-  height: 42px;
+  width: 100%;
+  height: 38px;
   margin: 0;
   border: 0;
   border-radius: 16px;
@@ -480,21 +490,121 @@ span.expense,
   box-shadow: none;
 }
 
-.quick-capture-button {
-  min-width: 72px;
-  height: 42px;
-  border: 0;
-  border-radius: 16px;
-  color: white;
-  background: var(--accent);
-  box-shadow: 0 8px 18px rgba(var(--accent-rgb), 0.18);
-  font-weight: 800;
+.quick-parse-status {
+  min-height: 18px;
+  margin: 7px 2px 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
-.quick-capture-button:disabled {
-  color: rgba(60, 60, 67, 0.32);
-  background: rgba(60, 60, 67, 0.1);
+.quick-parse-status.is-parsing {
+  color: var(--accent);
+}
+
+.quick-fields {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 9px;
+  margin-top: 10px;
+}
+
+.quick-amount-field,
+.quick-category-field {
+  display: flex;
+  min-width: 0;
+  min-height: 66px;
+  padding: 9px 11px;
+  border: 1px solid var(--hairline);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.54);
+  flex-direction: column;
+  gap: 3px;
+}
+
+.quick-amount-field > span,
+.quick-category-field > span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.quick-amount-field input {
+  width: 100%;
+  height: 31px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   box-shadow: none;
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+}
+
+.quick-amount-field input:focus {
+  border: 0;
+  box-shadow: none;
+}
+
+.quick-category-field select {
+  width: 100%;
+  height: 31px;
+  margin: 0;
+  padding: 0 18px 0 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 750;
+}
+
+.quick-category-field select:focus {
+  border: 0;
+  box-shadow: none;
+}
+
+.quick-type-control {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-top: 9px;
+  padding: 4px;
+  border: 1px solid var(--hairline);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.54);
+}
+
+.quick-type-control button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 13px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.quick-type-control button.active.expense {
+  color: #fff;
+  background: var(--expense);
+  box-shadow: 0 7px 15px rgba(29, 29, 31, 0.12);
+}
+
+.quick-type-control button.active.income {
+  color: #fff;
+  background: var(--income);
+  box-shadow: 0 7px 15px rgba(46, 156, 88, 0.16);
+}
+
+.quick-save-button {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 9px;
+  border-radius: 16px;
 }
 
 .quick-hints {
@@ -645,89 +755,6 @@ select:focus {
   box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.12);
 }
 
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px 12px;
-}
-
-.parse-status {
-  margin-top: -8px;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.parse-status.is-parsing {
-  color: var(--accent);
-}
-
-.amount-field {
-  padding: 16px;
-  border: 1px solid var(--hairline);
-  border-radius: 26px;
-  background: var(--glass);
-  box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(24px) saturate(1.2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
-}
-
-.amount-field label {
-  display: block;
-}
-
-.amount-input {
-  height: 74px;
-  margin-top: 5px;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  font-size: 46px;
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: -0.055em;
-}
-
-.amount-input:focus {
-  border: 0;
-  box-shadow: none;
-}
-
-.type-control {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px;
-  padding: 4px;
-  border: 1px solid var(--hairline);
-  border-radius: 19px;
-  background: rgba(255, 255, 255, 0.54);
-  box-shadow: var(--shadow-soft);
-}
-
-.type-control button {
-  min-height: 46px;
-  border: 0;
-  border-radius: 14px;
-  color: var(--muted);
-  background: transparent;
-  font-weight: 750;
-  transition: background 180ms ease, color 180ms ease, box-shadow 180ms ease;
-}
-
-.type-control button.active.expense {
-  color: #fff;
-  background: var(--expense);
-  box-shadow: 0 8px 18px rgba(29, 29, 31, 0.14);
-}
-
-.type-control button.active.income {
-  color: #fff;
-  background: var(--income);
-  box-shadow: 0 8px 18px rgba(46, 156, 88, 0.18);
-}
-
 .stat-row,
 .category-row {
   padding: 16px;
@@ -791,7 +818,7 @@ select:focus {
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(var(--tab-count), 1fr);
   gap: 6px;
 }
 
@@ -817,6 +844,10 @@ select:focus {
     transform 430ms cubic-bezier(0.16, 1.18, 0.24, 1),
     border-radius 220ms ease,
     filter 220ms ease;
+}
+
+.tabbar.three-tabs .liquid-indicator {
+  width: calc((100% - 16px - 12px) / 3);
 }
 
 .liquid-indicator::before,
@@ -965,7 +996,7 @@ select:focus {
     border-radius: 28px;
   }
 
-  .quick-entry label {
+  .quick-entry-heading {
     margin-bottom: 10px;
   }
 
@@ -974,9 +1005,12 @@ select:focus {
     padding: 7px;
   }
 
-  .quick-entry-box input,
-  .quick-capture-button {
+  .quick-entry-box input {
     height: 44px;
+  }
+
+  .quick-save-button {
+    min-height: 48px;
   }
 
   .quick-hints {

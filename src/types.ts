@@ -21,4 +21,4 @@ export interface ParsedEntry {
   date: string;
 }
 
-export type Page = "home" | "add" | "monthly" | "categories";
+export type Page = "home" | "monthly" | "categories";

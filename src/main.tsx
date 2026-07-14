@@ -9,11 +9,10 @@ import "./styles.css";
 
 const currency = new Intl.NumberFormat("zh-CN", { style: "currency", currency: "CNY" });
 const BUDGET_STORAGE_KEY = "ai-ledger-monthly-budget";
-type TabIconName = "home" | "add" | "monthly" | "categories";
+type TabIconName = "home" | "monthly" | "categories";
 
 const TABS: Array<{ page: Page; label: string; icon: TabIconName }> = [
   { page: "home", label: "首页", icon: "home" },
-  { page: "add", label: "记账", icon: "add" },
   { page: "monthly", label: "月度", icon: "monthly" },
   { page: "categories", label: "分类", icon: "categories" }
 ];
@@ -30,7 +29,6 @@ function App() {
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [page, setPage] = useState<Page>("home");
   const [loading, setLoading] = useState(true);
-  const [addSeed, setAddSeed] = useState<{ id: number; text: string } | null>(null);
 
   async function refresh() {
     setEntries(await getEntries());
@@ -53,26 +51,12 @@ function App() {
       createdAt: new Date().toISOString()
     });
     await refresh();
-    setAddSeed(null);
     setPage("home");
   }
 
   async function handleDelete(id: string) {
     await deleteEntry(id);
     await refresh();
-  }
-
-  function openAdd(text = "") {
-    setAddSeed({ id: Date.now(), text });
-    setPage("add");
-  }
-
-  function handlePageChange(nextPage: Page) {
-    if (nextPage === "add" && page !== "add") {
-      openAdd();
-      return;
-    }
-    setPage(nextPage);
   }
 
   return (
@@ -84,15 +68,14 @@ function App() {
             entries={entries}
             income={income}
             expense={expense}
-            onQuickCapture={openAdd}
+            onAdd={handleAdd}
             onDelete={handleDelete}
           />
         )}
-        {page === "add" && <AddEntry seed={addSeed} onAdd={handleAdd} />}
         {page === "monthly" && <MonthlyStats entries={entries} onExport={() => downloadCsv(entries)} />}
         {page === "categories" && <CategoryStats entries={entries} />}
       </main>
-      <LiquidTabBar page={page} onChange={handlePageChange} />
+      <LiquidTabBar page={page} onChange={setPage} />
     </div>
   );
 }
@@ -102,10 +85,6 @@ function TabIcon({ name }: { name: TabIconName }) {
 
   if (name === "home") {
     return <svg viewBox="0 0 24 24" aria-hidden="true"><path {...common} d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10Z" /><path {...common} d="M9 21v-6h6v6" /></svg>;
-  }
-
-  if (name === "add") {
-    return <svg viewBox="0 0 24 24" aria-hidden="true"><path {...common} d="M12 5v14M5 12h14" /></svg>;
   }
 
   if (name === "monthly") {
@@ -228,9 +207,9 @@ function LiquidTabBar({ page, onChange }: { page: Page; onChange: (page: Page) =
   return (
     <nav
       ref={navRef}
-      className={`tabbar ${isDragging ? "dragging" : ""}`}
+      className={`tabbar three-tabs ${isDragging ? "dragging" : ""}`}
       aria-label="主要导航"
-      style={{ "--active-index": activeIndex } as React.CSSProperties}
+      style={{ "--active-index": activeIndex, "--tab-count": TABS.length } as React.CSSProperties}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={finishDrag}
@@ -271,11 +250,14 @@ function Home(props: {
   entries: LedgerEntry[];
   income: number;
   expense: number;
-  onQuickCapture: (text: string) => void;
+  onAdd: (parsed: ParsedEntry) => Promise<void>;
   onDelete: (id: string) => void;
 }) {
   const recent = props.entries.slice(0, 8);
   const [quickText, setQuickText] = useState("");
+  const [quickDraft, setQuickDraft] = useState<ParsedEntry>(() => parseNaturalLanguage(""));
+  const [isQuickParsing, setIsQuickParsing] = useState(false);
+  const [isSavingQuickEntry, setIsSavingQuickEntry] = useState(false);
   const [monthlyBudget, setMonthlyBudget] = useState(() => {
     const saved = localStorage.getItem(BUDGET_STORAGE_KEY);
     return saved ? Number(saved) : 0;
@@ -298,6 +280,21 @@ function Home(props: {
           : "节奏不错，还在安全范围内。";
   const budgetPercent = Math.min(100, Math.round(budgetRatio * 100));
 
+  useEffect(() => {
+    if (!quickText.trim()) {
+      setIsQuickParsing(false);
+      return;
+    }
+
+    setIsQuickParsing(true);
+    const timer = window.setTimeout(() => {
+      setQuickDraft(parseNaturalLanguage(quickText));
+      setIsQuickParsing(false);
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [quickText]);
+
   function updateBudget(value: number) {
     const normalized = Number.isFinite(value) && value > 0 ? value : 0;
     setMonthlyBudget(normalized);
@@ -313,11 +310,28 @@ function Home(props: {
     updateBudget(value);
   }
 
-  function submitQuickEntry() {
-    const value = quickText.trim();
-    if (!value) return;
-    props.onQuickCapture(value);
-    setQuickText("");
+  function updateQuickDraft<K extends keyof ParsedEntry>(key: K, value: ParsedEntry[K]) {
+    setQuickDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  function updateQuickType(type: EntryType) {
+    setQuickDraft((current) => ({
+      ...current,
+      type,
+      category: type === "income" ? "收入" : current.category === "收入" ? "其他" : current.category
+    }));
+  }
+
+  async function submitQuickEntry() {
+    if (!quickDraft.amount || quickDraft.amount <= 0 || isSavingQuickEntry) return;
+    setIsSavingQuickEntry(true);
+    try {
+      await props.onAdd(quickDraft);
+      setQuickText("");
+      setQuickDraft(parseNaturalLanguage(""));
+    } finally {
+      setIsSavingQuickEntry(false);
+    }
   }
 
   return (
@@ -401,25 +415,81 @@ function Home(props: {
       </section>
 
       <section className="quick-entry">
-        <label htmlFor="quick-entry">一句话快速记账</label>
+        <div className="quick-entry-heading">
+          <label htmlFor="quick-entry">一句话快速记账</label>
+          <span>自动识别</span>
+        </div>
         <div className="quick-entry-box">
           <input
             id="quick-entry"
             value={quickText}
             onChange={(event) => setQuickText(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") submitQuickEntry();
-            }}
             placeholder="今天奶茶18元"
           />
-          <button className="quick-capture-button" onClick={submitQuickEntry} disabled={!quickText.trim()}>
-            继续
+        </div>
+        <p className={`quick-parse-status ${isQuickParsing ? "is-parsing" : ""}`} role="status">
+          {isQuickParsing ? "正在识别..." : quickText.trim() ? "已识别，可直接修改后记账" : "也可以直接填写金额和分类"}
+        </p>
+        <div className="quick-fields">
+          <label className="quick-amount-field" htmlFor="quick-amount">
+            <span>金额</span>
+            <input
+              id="quick-amount"
+              inputMode="decimal"
+              type="number"
+              min="0"
+              step="0.01"
+              value={quickDraft.amount || ""}
+              onChange={(event) => updateQuickDraft("amount", Number(event.target.value))}
+              placeholder="0.00"
+            />
+          </label>
+          <label className="quick-category-field" htmlFor="quick-category">
+            <span>分类</span>
+            <select
+              id="quick-category"
+              value={quickDraft.category}
+              onChange={(event) => updateQuickDraft("category", event.target.value as Category)}
+            >
+              {categoryOptions()
+                .filter((category) => (quickDraft.type === "income" ? category === "收入" : category !== "收入"))
+                .map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+            </select>
+          </label>
+        </div>
+        <div className="quick-type-control" role="group" aria-label="账目类型">
+          <button
+            type="button"
+            className={quickDraft.type === "expense" ? "active expense" : ""}
+            aria-pressed={quickDraft.type === "expense"}
+            onClick={() => updateQuickType("expense")}
+          >
+            支出
+          </button>
+          <button
+            type="button"
+            className={quickDraft.type === "income" ? "active income" : ""}
+            aria-pressed={quickDraft.type === "income"}
+            onClick={() => updateQuickType("income")}
+          >
+            收入
           </button>
         </div>
+        <button
+          className="primary-button quick-save-button"
+          disabled={!quickDraft.amount || quickDraft.amount <= 0 || isSavingQuickEntry}
+          onClick={submitQuickEntry}
+        >
+          {isSavingQuickEntry ? "正在保存..." : "记一笔"}
+        </button>
         <div className="quick-hints">
-          <button onClick={() => setQuickText("今天奶茶18元")}>奶茶18</button>
-          <button onClick={() => setQuickText("昨天打车42.5元")}>打车42.5</button>
-          <button onClick={() => setQuickText("工资到账5000")}>工资5000</button>
+          <button type="button" onClick={() => setQuickText("今天奶茶18元")}>奶茶18</button>
+          <button type="button" onClick={() => setQuickText("昨天打车42.5元")}>打车42.5</button>
+          <button type="button" onClick={() => setQuickText("工资到账5000")}>工资5000</button>
         </div>
       </section>
 
@@ -436,130 +506,6 @@ function Home(props: {
           ))}
         </div>
       </section>
-    </section>
-  );
-}
-
-function AddEntry(props: { seed: { id: number; text: string } | null; onAdd: (parsed: ParsedEntry) => void }) {
-  const [text, setText] = useState("");
-  const [draft, setDraft] = useState<ParsedEntry>(() => parseNaturalLanguage(""));
-  const [isParsing, setIsParsing] = useState(false);
-
-  useEffect(() => {
-    setText(props.seed?.text ?? "");
-    setDraft(parseNaturalLanguage(""));
-  }, [props.seed?.id]);
-
-  useEffect(() => {
-    if (!text.trim()) {
-      setIsParsing(false);
-      return;
-    }
-
-    setIsParsing(true);
-    const timer = window.setTimeout(() => {
-      setDraft(parseNaturalLanguage(text));
-      setIsParsing(false);
-    }, 300);
-
-    return () => window.clearTimeout(timer);
-  }, [text]);
-
-  function update<K extends keyof ParsedEntry>(key: K, value: ParsedEntry[K]) {
-    setDraft((current) => ({ ...current, [key]: value }));
-  }
-
-  function updateType(type: EntryType) {
-    setDraft((current) => ({
-      ...current,
-      type,
-      category: type === "income" ? "收入" : current.category === "收入" ? "其他" : current.category
-    }));
-  }
-
-  return (
-    <section className="page add-page">
-      <header className="plain-header">
-        <p className="eyebrow">AI 识别</p>
-        <h1>说一句，账就记好了</h1>
-      </header>
-
-      <label className="input-label" htmlFor="natural">
-        自然语言输入
-      </label>
-      <textarea
-        id="natural"
-        value={text}
-        onChange={(event) => setText(event.target.value)}
-        rows={4}
-        placeholder="例如：昨天打车42.5元 / 工资到账5000"
-      />
-      <p className={`parse-status ${isParsing ? "is-parsing" : ""}`} role="status">
-        {isParsing ? "正在自动识别..." : text.trim() ? "已自动识别，可直接确认或微调" : "输入后会自动识别金额、分类和日期"}
-      </p>
-
-      <section className="amount-field">
-        <label htmlFor="amount">
-          金额
-          <input
-            id="amount"
-            className="amount-input"
-            inputMode="decimal"
-            type="number"
-            min="0"
-            step="0.01"
-            value={draft.amount || ""}
-            onChange={(event) => update("amount", Number(event.target.value))}
-          />
-        </label>
-      </section>
-
-      <div className="type-control" role="group" aria-label="账目类型">
-        <button
-          type="button"
-          className={draft.type === "expense" ? "active expense" : ""}
-          aria-pressed={draft.type === "expense"}
-          onClick={() => updateType("expense")}
-        >
-          支出
-        </button>
-        <button
-          type="button"
-          className={draft.type === "income" ? "active income" : ""}
-          aria-pressed={draft.type === "income"}
-          onClick={() => updateType("income")}
-        >
-          收入
-        </button>
-      </div>
-
-      <div className="form-grid details-grid">
-        <label>
-          分类
-          <select value={draft.category} onChange={(event) => update("category", event.target.value as Category)}>
-            {categoryOptions()
-              .filter((category) => (draft.type === "income" ? category === "收入" : category !== "收入"))
-              .map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-          </select>
-        </label>
-        <label>
-          日期
-          <input type="date" value={draft.date} onChange={(event) => update("date", event.target.value)} />
-        </label>
-      </div>
-
-      <label className="input-label" htmlFor="note">
-        备注
-      </label>
-      <input id="note" value={draft.note} onChange={(event) => update("note", event.target.value)} />
-
-      <button className="primary-button" disabled={!draft.amount || draft.amount <= 0} onClick={() => props.onAdd(draft)}>
-        保存这一笔
-      </button>
     </section>
   );
 }

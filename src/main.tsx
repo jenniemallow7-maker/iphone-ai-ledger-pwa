@@ -9,11 +9,13 @@ import "./styles.css";
 
 const currency = new Intl.NumberFormat("zh-CN", { style: "currency", currency: "CNY" });
 const BUDGET_STORAGE_KEY = "ai-ledger-monthly-budget";
-const TABS: Array<{ page: Page; label: string; icon: string }> = [
-  { page: "home", label: "首页", icon: "⌂" },
-  { page: "add", label: "记账", icon: "+" },
-  { page: "monthly", label: "月度", icon: "▥" },
-  { page: "categories", label: "分类", icon: "◎" }
+type TabIconName = "home" | "add" | "monthly" | "categories";
+
+const TABS: Array<{ page: Page; label: string; icon: TabIconName }> = [
+  { page: "home", label: "首页", icon: "home" },
+  { page: "add", label: "记账", icon: "add" },
+  { page: "monthly", label: "月度", icon: "monthly" },
+  { page: "categories", label: "分类", icon: "categories" }
 ];
 
 function uid() {
@@ -28,6 +30,7 @@ function App() {
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [page, setPage] = useState<Page>("home");
   const [loading, setLoading] = useState(true);
+  const [addSeed, setAddSeed] = useState<{ id: number; text: string } | null>(null);
 
   async function refresh() {
     setEntries(await getEntries());
@@ -50,12 +53,26 @@ function App() {
       createdAt: new Date().toISOString()
     });
     await refresh();
+    setAddSeed(null);
     setPage("home");
   }
 
   async function handleDelete(id: string) {
     await deleteEntry(id);
     await refresh();
+  }
+
+  function openAdd(text = "") {
+    setAddSeed({ id: Date.now(), text });
+    setPage("add");
+  }
+
+  function handlePageChange(nextPage: Page) {
+    if (nextPage === "add" && page !== "add") {
+      openAdd();
+      return;
+    }
+    setPage(nextPage);
   }
 
   return (
@@ -67,19 +84,35 @@ function App() {
             entries={entries}
             income={income}
             expense={expense}
-            onAdd={() => setPage("add")}
-            onQuickAdd={handleAdd}
-            onExport={() => downloadCsv(entries)}
+            onQuickCapture={openAdd}
             onDelete={handleDelete}
           />
         )}
-        {page === "add" && <AddEntry onAdd={handleAdd} />}
-        {page === "monthly" && <MonthlyStats entries={entries} />}
+        {page === "add" && <AddEntry seed={addSeed} onAdd={handleAdd} />}
+        {page === "monthly" && <MonthlyStats entries={entries} onExport={() => downloadCsv(entries)} />}
         {page === "categories" && <CategoryStats entries={entries} />}
       </main>
-      <LiquidTabBar page={page} onChange={setPage} />
+      <LiquidTabBar page={page} onChange={handlePageChange} />
     </div>
   );
+}
+
+function TabIcon({ name }: { name: TabIconName }) {
+  const common = { fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+
+  if (name === "home") {
+    return <svg viewBox="0 0 24 24" aria-hidden="true"><path {...common} d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10Z" /><path {...common} d="M9 21v-6h6v6" /></svg>;
+  }
+
+  if (name === "add") {
+    return <svg viewBox="0 0 24 24" aria-hidden="true"><path {...common} d="M12 5v14M5 12h14" /></svg>;
+  }
+
+  if (name === "monthly") {
+    return <svg viewBox="0 0 24 24" aria-hidden="true"><rect {...common} x="3" y="5" width="18" height="16" rx="3" /><path {...common} d="M7 3v4M17 3v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" /></svg>;
+  }
+
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path {...common} d="M4 20V10M10 20V4M16 20v-7M22 20H2" /><path {...common} d="M4 7h0M10 2h0M16 11h0" /></svg>;
 }
 
 function LiquidTabBar({ page, onChange }: { page: Page; onChange: (page: Page) => void }) {
@@ -224,7 +257,7 @@ function LiquidTabBar({ page, onChange }: { page: Page; onChange: (page: Page) =
             }`}
             onClick={() => handleTabClick(tab.page)}
           >
-            <span aria-hidden="true">{tab.icon}</span>
+            <span className="tab-icon"><TabIcon name={tab.icon} /></span>
             {tab.label}
           </button>
         ))}
@@ -238,9 +271,7 @@ function Home(props: {
   entries: LedgerEntry[];
   income: number;
   expense: number;
-  onAdd: () => void;
-  onQuickAdd: (parsed: ParsedEntry) => void;
-  onExport: () => void;
+  onQuickCapture: (text: string) => void;
   onDelete: (id: string) => void;
 }) {
   const recent = props.entries.slice(0, 8);
@@ -248,6 +279,10 @@ function Home(props: {
   const [monthlyBudget, setMonthlyBudget] = useState(() => {
     const saved = localStorage.getItem(BUDGET_STORAGE_KEY);
     return saved ? Number(saved) : 0;
+  });
+  const [showCustomBudget, setShowCustomBudget] = useState(() => {
+    const saved = Number(localStorage.getItem(BUDGET_STORAGE_KEY));
+    return saved > 0 && ![1000, 3000, 5000].includes(saved);
   });
 
   const budgetRatio = monthlyBudget > 0 ? props.expense / monthlyBudget : 0;
@@ -261,12 +296,10 @@ function Home(props: {
         : budgetLevel === "warning"
           ? "快到限额了，建议放慢一点。"
           : "节奏不错，还在安全范围内。";
-  const remainingBudget = Math.max(0, monthlyBudget - props.expense);
   const budgetPercent = Math.min(100, Math.round(budgetRatio * 100));
 
-  function updateBudget(value: string) {
-    const next = Number(value);
-    const normalized = Number.isFinite(next) && next > 0 ? next : 0;
+  function updateBudget(value: number) {
+    const normalized = Number.isFinite(value) && value > 0 ? value : 0;
     setMonthlyBudget(normalized);
     if (normalized > 0) {
       localStorage.setItem(BUDGET_STORAGE_KEY, String(normalized));
@@ -275,15 +308,15 @@ function Home(props: {
     }
   }
 
+  function selectPreset(value: number) {
+    setShowCustomBudget(false);
+    updateBudget(value);
+  }
+
   function submitQuickEntry() {
     const value = quickText.trim();
     if (!value) return;
-    const parsed = parseNaturalLanguage(value);
-    if (!parsed.amount || parsed.amount <= 0) {
-      props.onAdd();
-      return;
-    }
-    props.onQuickAdd(parsed);
+    props.onQuickCapture(value);
     setQuickText("");
   }
 
@@ -294,9 +327,6 @@ function Home(props: {
           <p className="eyebrow">AI 记账</p>
           <h1>今天花了什么？</h1>
         </div>
-        <button className="icon-button" onClick={props.onExport} disabled={!props.entries.length} aria-label="导出 CSV">
-          CSV
-        </button>
       </header>
 
       <section className="balance-card">
@@ -306,11 +336,11 @@ function Home(props: {
         </div>
         <strong>{currency.format(props.expense)}</strong>
         <div className="mini-ledger">
-          <div>
+          <div className="income">
             <span>收入</span>
             <b>{currency.format(props.income)}</b>
           </div>
-          <div>
+          <div className="expense">
             <span>结余</span>
             <b>{currency.format(props.income - props.expense)}</b>
           </div>
@@ -318,30 +348,60 @@ function Home(props: {
         <div className={`budget-strip ${budgetLevel}`}>
           <div className="budget-copy">
             <span>本月限额</span>
-            <strong>{monthlyBudget > 0 ? `${budgetPercent}% · 剩 ${currency.format(remainingBudget)}` : "未设置"}</strong>
+            <strong>{monthlyBudget > 0 ? `已用 ${currency.format(props.expense)} / ${currency.format(monthlyBudget)}` : "尚未设置"}</strong>
             <p>{budgetMessage}</p>
           </div>
-          <label className="budget-input">
-            <span>限额</span>
-            <input
-              inputMode="decimal"
-              type="number"
-              min="0"
-              step="100"
-              value={monthlyBudget || ""}
-              onChange={(event) => updateBudget(event.target.value)}
-              placeholder="3000"
-              aria-label="本月限额"
-            />
-          </label>
-          <div className="budget-track" aria-hidden="true">
+          <div className="budget-options" aria-label="选择本月限额">
+            {[1000, 3000, 5000].map((value) => (
+              <button
+                key={value}
+                type="button"
+                className={monthlyBudget === value && !showCustomBudget ? "active" : ""}
+                aria-pressed={monthlyBudget === value && !showCustomBudget}
+                onClick={() => selectPreset(value)}
+              >
+                {value}
+              </button>
+            ))}
+            <button
+              type="button"
+              className={showCustomBudget ? "active" : ""}
+              aria-pressed={showCustomBudget}
+              onClick={() => setShowCustomBudget(true)}
+            >
+              自定义
+            </button>
+          </div>
+          {showCustomBudget && (
+            <label className="custom-budget-input">
+              <span>自定义限额</span>
+              <input
+                inputMode="decimal"
+                type="number"
+                min="0"
+                step="100"
+                value={monthlyBudget || ""}
+                onChange={(event) => updateBudget(Number(event.target.value))}
+                placeholder="输入金额"
+                aria-label="自定义本月限额"
+              />
+            </label>
+          )}
+          <div
+            className="budget-track"
+            role="progressbar"
+            aria-label="本月限额使用进度"
+            aria-valuemin={0}
+            aria-valuemax={monthlyBudget || undefined}
+            aria-valuenow={monthlyBudget > 0 ? Math.min(props.expense, monthlyBudget) : 0}
+          >
             <div style={{ width: `${monthlyBudget > 0 ? budgetPercent : 0}%` }} />
           </div>
         </div>
       </section>
 
       <section className="quick-entry">
-        <label htmlFor="quick-entry">一句话记账</label>
+        <label htmlFor="quick-entry">一句话快速记账</label>
         <div className="quick-entry-box">
           <input
             id="quick-entry"
@@ -352,8 +412,8 @@ function Home(props: {
             }}
             placeholder="今天奶茶18元"
           />
-          <button onClick={submitQuickEntry} disabled={!quickText.trim()}>
-            保存
+          <button className="quick-capture-button" onClick={submitQuickEntry} disabled={!quickText.trim()}>
+            继续
           </button>
         </div>
         <div className="quick-hints">
@@ -362,15 +422,6 @@ function Home(props: {
           <button onClick={() => setQuickText("工资到账5000")}>工资5000</button>
         </div>
       </section>
-
-      <div className="home-actions">
-        <button className="secondary-button" onClick={props.onAdd}>
-          手动校对
-        </button>
-        <button className="secondary-button light" onClick={props.onExport} disabled={!props.entries.length}>
-          导出 CSV
-        </button>
-      </div>
 
       <section className="section">
         <div className="section-title">
@@ -389,16 +440,41 @@ function Home(props: {
   );
 }
 
-function AddEntry(props: { onAdd: (parsed: ParsedEntry) => void }) {
-  const [text, setText] = useState("今天奶茶18元");
-  const [draft, setDraft] = useState<ParsedEntry>(() => parseNaturalLanguage("今天奶茶18元"));
+function AddEntry(props: { seed: { id: number; text: string } | null; onAdd: (parsed: ParsedEntry) => void }) {
+  const [text, setText] = useState("");
+  const [draft, setDraft] = useState<ParsedEntry>(() => parseNaturalLanguage(""));
+  const [isParsing, setIsParsing] = useState(false);
 
-  function parse() {
-    setDraft(parseNaturalLanguage(text));
-  }
+  useEffect(() => {
+    setText(props.seed?.text ?? "");
+    setDraft(parseNaturalLanguage(""));
+  }, [props.seed?.id]);
+
+  useEffect(() => {
+    if (!text.trim()) {
+      setIsParsing(false);
+      return;
+    }
+
+    setIsParsing(true);
+    const timer = window.setTimeout(() => {
+      setDraft(parseNaturalLanguage(text));
+      setIsParsing(false);
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [text]);
 
   function update<K extends keyof ParsedEntry>(key: K, value: ParsedEntry[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  function updateType(type: EntryType) {
+    setDraft((current) => ({
+      ...current,
+      type,
+      category: type === "income" ? "收入" : current.category === "收入" ? "其他" : current.category
+    }));
   }
 
   return (
@@ -415,25 +491,19 @@ function AddEntry(props: { onAdd: (parsed: ParsedEntry) => void }) {
         id="natural"
         value={text}
         onChange={(event) => setText(event.target.value)}
-        onBlur={parse}
         rows={4}
         placeholder="例如：昨天打车42.5元 / 工资到账5000"
       />
-      <button className="secondary-button" onClick={parse}>
-        识别内容
-      </button>
+      <p className={`parse-status ${isParsing ? "is-parsing" : ""}`} role="status">
+        {isParsing ? "正在自动识别..." : text.trim() ? "已自动识别，可直接确认或微调" : "输入后会自动识别金额、分类和日期"}
+      </p>
 
-      <div className="form-grid">
-        <label>
-          类型
-          <select value={draft.type} onChange={(event) => update("type", event.target.value as EntryType)}>
-            <option value="expense">支出</option>
-            <option value="income">收入</option>
-          </select>
-        </label>
-        <label>
+      <section className="amount-field">
+        <label htmlFor="amount">
           金额
           <input
+            id="amount"
+            className="amount-input"
             inputMode="decimal"
             type="number"
             min="0"
@@ -442,14 +512,38 @@ function AddEntry(props: { onAdd: (parsed: ParsedEntry) => void }) {
             onChange={(event) => update("amount", Number(event.target.value))}
           />
         </label>
+      </section>
+
+      <div className="type-control" role="group" aria-label="账目类型">
+        <button
+          type="button"
+          className={draft.type === "expense" ? "active expense" : ""}
+          aria-pressed={draft.type === "expense"}
+          onClick={() => updateType("expense")}
+        >
+          支出
+        </button>
+        <button
+          type="button"
+          className={draft.type === "income" ? "active income" : ""}
+          aria-pressed={draft.type === "income"}
+          onClick={() => updateType("income")}
+        >
+          收入
+        </button>
+      </div>
+
+      <div className="form-grid details-grid">
         <label>
           分类
           <select value={draft.category} onChange={(event) => update("category", event.target.value as Category)}>
-            {categoryOptions().map((category) => (
-              <option key={category} value={category}>
-                {category}
-              </option>
-            ))}
+            {categoryOptions()
+              .filter((category) => (draft.type === "income" ? category === "收入" : category !== "收入"))
+              .map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
           </select>
         </label>
         <label>
@@ -470,7 +564,7 @@ function AddEntry(props: { onAdd: (parsed: ParsedEntry) => void }) {
   );
 }
 
-function MonthlyStats({ entries }: { entries: LedgerEntry[] }) {
+function MonthlyStats({ entries, onExport }: { entries: LedgerEntry[]; onExport: () => void }) {
   const rows = useMemo(() => {
     const map = new Map<string, { month: string; income: number; expense: number }>();
     entries.forEach((entry) => {
@@ -496,9 +590,14 @@ function MonthlyStats({ entries }: { entries: LedgerEntry[] }) {
 
   return (
     <section className="page">
-      <header className="plain-header">
-        <p className="eyebrow">趋势</p>
-        <h1>月度统计</h1>
+      <header className="app-header plain-header">
+        <div>
+          <p className="eyebrow">趋势</p>
+          <h1>月度统计</h1>
+        </div>
+        <button className="icon-button" onClick={onExport} disabled={!entries.length} aria-label="导出 CSV">
+          CSV
+        </button>
       </header>
       <section className="year-card">
         <div className="balance-topline">
@@ -507,11 +606,11 @@ function MonthlyStats({ entries }: { entries: LedgerEntry[] }) {
         </div>
         <strong>{currency.format(yearExpense)}</strong>
         <div className="year-grid">
-          <div>
+          <div className="income">
             <span>年收入</span>
             <b>{currency.format(yearIncome)}</b>
           </div>
-          <div>
+          <div className={yearIncome - yearExpense >= 0 ? "income" : "expense"}>
             <span>年结余</span>
             <b>{currency.format(yearIncome - yearExpense)}</b>
           </div>
@@ -564,7 +663,7 @@ function CategoryStats({ entries }: { entries: LedgerEntry[] }) {
           <article className="category-row" key={row.category}>
             <div className="stat-heading">
               <strong>{row.category}</strong>
-              <span>{currency.format(row.total)}</span>
+              <span className="expense">{currency.format(row.total)}</span>
             </div>
             <div className="bar-track">
               <div className="bar-fill expense" style={{ width: `${Math.max(4, (row.total / max) * 100)}%` }} />
@@ -583,7 +682,7 @@ function Bar({ label, value, max, tone }: { label: string; value: number; max: n
       <div className="bar-track">
         <div className={`bar-fill ${tone}`} style={{ width: `${Math.max(4, (value / max) * 100)}%` }} />
       </div>
-      <strong>{currency.format(value)}</strong>
+      <strong className={tone}>{currency.format(value)}</strong>
     </div>
   );
 }

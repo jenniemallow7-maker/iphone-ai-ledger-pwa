@@ -5,8 +5,10 @@
   --hairline: rgba(255, 255, 255, 0.76);
   --glass: rgba(255, 255, 255, 0.68);
   --glass-strong: rgba(255, 255, 255, 0.82);
-  --blue: #0a84ff;
-  --green: #34c759;
+  --accent: #0a84ff;
+  --accent-rgb: 10, 132, 255;
+  --income: #2e9c58;
+  --expense: #1d1d1f;
   --orange: #ff9500;
   --red: #ff3b30;
   --shadow-soft:
@@ -164,13 +166,19 @@ h2 {
 }
 
 .income strong,
+.income b,
+strong.income,
+span.income,
 .entry-amount.income {
-  color: var(--green);
+  color: var(--income);
 }
 
 .expense strong,
+.expense b,
+strong.expense,
+span.expense,
 .entry-amount.expense {
-  color: var(--red);
+  color: var(--expense);
 }
 
 .primary-button,
@@ -185,10 +193,10 @@ h2 {
 
 .primary-button {
   color: #fff;
-  background: var(--blue);
+  background: var(--accent);
   box-shadow:
     0 1px 1px rgba(0, 0, 0, 0.05),
-    0 12px 30px rgba(10, 132, 255, 0.18);
+    0 12px 30px rgba(var(--accent-rgb), 0.18);
 }
 
 .primary-button:disabled,
@@ -340,9 +348,7 @@ h2 {
   backdrop-filter: blur(18px) saturate(1.12);
   -webkit-backdrop-filter: blur(18px) saturate(1.12);
   display: grid;
-  grid-template-columns: 1fr 84px;
-  gap: 8px;
-  overflow: hidden;
+  gap: 10px;
 }
 
 .budget-strip.warning {
@@ -356,7 +362,7 @@ h2 {
 }
 
 .budget-copy span,
-.budget-input span {
+.custom-budget-input span {
   display: block;
   color: var(--muted);
   font-size: 12px;
@@ -377,27 +383,44 @@ h2 {
   line-height: 1.35;
 }
 
-.budget-input input {
-  height: 36px;
-  margin-top: 5px;
-  border: 1px solid var(--hairline);
-  border-radius: 15px;
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.55);
-  font-weight: 800;
+.budget-options {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
 }
 
-.budget-input input::placeholder {
-  color: #a1a1a6;
+.budget-options button {
+  min-height: 34px;
+  border: 1px solid rgba(60, 60, 67, 0.1);
+  border-radius: 12px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.54);
+  font-size: 12px;
+  font-weight: 750;
 }
 
-.budget-input input:focus {
-  border-color: rgba(10, 132, 255, 0.42);
-  box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.12);
+.budget-options button.active {
+  border-color: rgba(var(--accent-rgb), 0.28);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.1);
+  box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.04);
+}
+
+.custom-budget-input {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
+.custom-budget-input input {
+  height: 38px;
+  margin: 0;
+  border-radius: 13px;
+  font-weight: 750;
 }
 
 .budget-track {
-  grid-column: 1 / -1;
   height: 6px;
   overflow: hidden;
   border-radius: 999px;
@@ -408,7 +431,7 @@ h2 {
   height: 100%;
   max-width: 100%;
   border-radius: inherit;
-  background: var(--blue);
+  background: var(--accent);
   transition: width 260ms ease, background 260ms ease;
 }
 
@@ -457,19 +480,21 @@ h2 {
   box-shadow: none;
 }
 
-.quick-entry-box button {
+.quick-capture-button {
   min-width: 72px;
   height: 42px;
   border: 0;
   border-radius: 16px;
   color: white;
-  background: var(--blue);
+  background: var(--accent);
+  box-shadow: 0 8px 18px rgba(var(--accent-rgb), 0.18);
   font-weight: 800;
 }
 
-.quick-entry-box button:disabled {
+.quick-capture-button:disabled {
   color: rgba(60, 60, 67, 0.32);
   background: rgba(60, 60, 67, 0.1);
+  box-shadow: none;
 }
 
 .quick-hints {
@@ -492,17 +517,10 @@ h2 {
   padding: 0 13px;
   border: 1px solid var(--hairline);
   border-radius: 999px;
-  color: var(--blue);
-  background: rgba(255, 255, 255, 0.56);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.07);
   font-size: 13px;
   font-weight: 700;
-}
-
-.home-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  flex: 0 0 auto;
-  gap: 12px;
 }
 
 .section {
@@ -539,15 +557,15 @@ h2 {
   padding: 7px 9px;
   border-radius: 999px;
   text-align: center;
-  color: var(--blue);
-  background: rgba(10, 132, 255, 0.1);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.1);
   font-size: 13px;
   font-weight: 700;
 }
 
 .category-pill.income {
-  color: var(--green);
-  background: rgba(52, 199, 89, 0.1);
+  color: var(--income);
+  background: rgba(46, 156, 88, 0.1);
 }
 
 .entry-main {
@@ -623,14 +641,91 @@ select {
 textarea:focus,
 input:focus,
 select:focus {
-  border-color: rgba(10, 132, 255, 0.42);
-  box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.12);
+  border-color: rgba(var(--accent-rgb), 0.42);
+  box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.12);
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 15px 12px;
+}
+
+.parse-status {
+  margin-top: -8px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.parse-status.is-parsing {
+  color: var(--accent);
+}
+
+.amount-field {
+  padding: 16px;
+  border: 1px solid var(--hairline);
+  border-radius: 26px;
+  background: var(--glass);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+}
+
+.amount-field label {
+  display: block;
+}
+
+.amount-input {
+  height: 74px;
+  margin-top: 5px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: 46px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.055em;
+}
+
+.amount-input:focus {
+  border: 0;
+  box-shadow: none;
+}
+
+.type-control {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--hairline);
+  border-radius: 19px;
+  background: rgba(255, 255, 255, 0.54);
+  box-shadow: var(--shadow-soft);
+}
+
+.type-control button {
+  min-height: 46px;
+  border: 0;
+  border-radius: 14px;
+  color: var(--muted);
+  background: transparent;
+  font-weight: 750;
+  transition: background 180ms ease, color 180ms ease, box-shadow 180ms ease;
+}
+
+.type-control button.active.expense {
+  color: #fff;
+  background: var(--expense);
+  box-shadow: 0 8px 18px rgba(29, 29, 31, 0.14);
+}
+
+.type-control button.active.income {
+  color: #fff;
+  background: var(--income);
+  box-shadow: 0 8px 18px rgba(46, 156, 88, 0.18);
 }
 
 .stat-row,
@@ -660,11 +755,11 @@ select:focus {
 }
 
 .bar-fill.income {
-  background: var(--green);
+  background: var(--income);
 }
 
 .bar-fill.expense {
-  background: var(--red);
+  background: var(--expense);
 }
 
 .tabbar {
@@ -762,13 +857,20 @@ select:focus {
 }
 
 .tab:focus-visible {
-  box-shadow: inset 0 0 0 1px rgba(10, 132, 255, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.28);
 }
 
-.tab span {
-  font-size: 21px;
-  line-height: 1;
+.tab-icon {
+  display: grid;
+  width: 21px;
+  height: 21px;
+  place-items: center;
   transition: transform 180ms ease;
+}
+
+.tab-icon svg {
+  width: 20px;
+  height: 20px;
 }
 
 .tab.active,
@@ -780,11 +882,11 @@ select:focus {
   transform: translateY(-2px);
 }
 
-.tab.active span {
+.tab.active .tab-icon {
   transform: translateY(-1px) scale(1.04);
 }
 
-.tab.preview span {
+.tab.preview .tab-icon {
   transform: translateY(-1px) scale(1.03);
 }
 
@@ -847,7 +949,6 @@ select:focus {
     margin-top: 14px;
     padding: 12px;
     border-radius: 20px;
-    grid-template-columns: 1fr 94px;
     gap: 10px;
   }
 
@@ -855,7 +956,7 @@ select:focus {
     line-height: 1.5;
   }
 
-  .budget-input input {
+  .custom-budget-input input {
     height: 38px;
   }
 
@@ -874,7 +975,7 @@ select:focus {
   }
 
   .quick-entry-box input,
-  .quick-entry-box button {
+  .quick-capture-button {
     height: 44px;
   }
 

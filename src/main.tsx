@@ -5,6 +5,9 @@ import { categoryOptions, parseNaturalLanguage, toDateInputValue } from "./parse
 import { buildImportPreview, type ImportPreview } from "./importCsv";
 import { dropBackup, readBackup, saveBackup, type Backup } from "./backup";
 import { classifyRemote, isAiMode, setAiMode } from "./aiClassify";
+import { tapFeedback } from "./haptics";
+import { nextCompactState, type CompactState } from "./scrollDirection";
+import { stretchFactor, targetIndex } from "./tabGesture";
 import { addEntries, addEntry, clearEntries, deleteEntry, getEntries } from "./storage";
 import { CATEGORIES, type Category, type EntryType, type LedgerEntry, type Page, type ParsedEntry } from "./types";
 import { registerServiceWorker } from "./pwa";
@@ -116,24 +119,46 @@ function TabIcon({ name }: { name: TabIconName }) {
 
 function LiquidTabBar({ page, onChange }: { page: Page; onChange: (page: Page) => void }) {
   const navRef = useRef<HTMLElement | null>(null);
-  const [dragX, setDragX] = useState<number | null>(null);
-  const [dragPhysics, setDragPhysics] = useState({ scale: 1, shine: 50, origin: 50 });
+  const indicatorRef = useRef<HTMLDivElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [compact, setCompact] = useState(false);
   const activeIndex = Math.max(
     0,
     TABS.findIndex((tab) => tab.page === page)
   );
   const layout = useRef({ itemWidth: 0, step: 0, maxX: 0 });
-  const lastDrag = useRef({ x: 0, time: 0 });
+  const lastDrag = useRef({ x: 0, time: 0, velocity: 0 });
   const dragStartX = useRef(0);
   const suppressClick = useRef(false);
+  const dragging = useRef(false);
+
+  // 向下滚动时收起，向上滚动或回到顶部时恢复。判断逻辑在 nextCompactState 里。
+  useEffect(() => {
+    let state: CompactState = { compact: false, lastY: window.scrollY };
+    let ticking = false;
+
+    function evaluate() {
+      state = nextCompactState(window.scrollY, state);
+      setCompact(state.compact);
+      ticking = false;
+    }
+
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(evaluate);
+    }
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   function measure() {
     const nav = navRef.current;
     if (!nav) return layout.current;
     const styles = window.getComputedStyle(nav);
-    const padding = Number.parseFloat(styles.paddingLeft) || 8;
+    const padding = Number.parseFloat(styles.paddingLeft) || 7;
     const gap = Number.parseFloat(styles.columnGap) || 6;
     const width = nav.getBoundingClientRect().width - padding * 2;
     const itemWidth = (width - gap * (TABS.length - 1)) / TABS.length;
@@ -150,15 +175,9 @@ function LiquidTabBar({ page, onChange }: { page: Page; onChange: (page: Page) =
     const current = measure();
     if (!nav) return 0;
     const styles = window.getComputedStyle(nav);
-    const padding = Number.parseFloat(styles.paddingLeft) || 8;
+    const padding = Number.parseFloat(styles.paddingLeft) || 7;
     const left = nav.getBoundingClientRect().left + padding + current.itemWidth / 2;
     return Math.min(current.maxX, Math.max(0, clientX - left));
-  }
-
-  function selectFromX(x: number) {
-    const current = measure();
-    const index = indexFromX(x);
-    onChange(TABS[index].page);
   }
 
   function indexFromX(x: number) {
@@ -166,20 +185,27 @@ function LiquidTabBar({ page, onChange }: { page: Page; onChange: (page: Page) =
     return Math.min(TABS.length - 1, Math.max(0, Math.round(x / current.step)));
   }
 
-  function updatePhysics(x: number) {
-    const current = measure();
-    const now = performance.now();
-    const elapsed = Math.max(16, now - lastDrag.current.time);
-    const delta = x - lastDrag.current.x;
-    const velocity = Math.min(1, Math.abs(delta) / elapsed / 1.2);
-    const snapPoint = Math.round(x / current.step) * current.step;
-    const pull = Math.min(1, Math.abs(x - snapPoint) / Math.max(1, current.step / 2));
-    const scale = 1 + velocity * 0.08 + pull * 0.07;
-    const shine = Math.min(78, Math.max(22, 50 + (delta / Math.max(1, current.step)) * 70));
-    const origin = delta >= 0 ? 18 : 82;
+  /**
+   * 拖动期间直接写 DOM，不走 React state。指针事件在 120Hz 屏上每秒能发
+   * 上百次，每次都重渲染组件的话，动效再精细也会卡在渲染上。
+   */
+  function paint(x: number, stretch: number, shine: number, origin: number) {
+    const node = indicatorRef.current;
+    if (!node) return;
 
-    lastDrag.current = { x, time: now };
-    setDragPhysics({ scale, shine, origin });
+    // 拉长的同时变窄，保持「体积」不变——液体被拉伸就是这样，
+    // 只放大 X 会像贴纸被扯宽。
+    node.style.transform = `translate3d(${x}px, 0, 0) scaleX(${stretch}) scaleY(${1 / Math.sqrt(stretch)})`;
+    node.style.transformOrigin = `${origin}% 50%`;
+    node.style.setProperty("--shine-x", `${shine}%`);
+  }
+
+  function clearPaint() {
+    const node = indicatorRef.current;
+    if (!node) return;
+    node.style.transform = "";
+    node.style.transformOrigin = "";
+    node.style.removeProperty("--shine-x");
   }
 
   function handlePointerDown(event: React.PointerEvent<HTMLElement>) {
@@ -188,32 +214,58 @@ function LiquidTabBar({ page, onChange }: { page: Page; onChange: (page: Page) =
     const x = xFromPointer(event.clientX);
     dragStartX.current = x;
     suppressClick.current = false;
-    lastDrag.current = { x, time: performance.now() };
+    lastDrag.current = { x, time: performance.now(), velocity: 0 };
+    dragging.current = true;
     setIsDragging(true);
-    setDragX(x);
     setPreviewIndex(indexFromX(x));
-    setDragPhysics({ scale: 1.03, shine: 50, origin: 50 });
+    paint(x, 1.03, 50, 50);
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
   function handlePointerMove(event: React.PointerEvent<HTMLElement>) {
-    if (!isDragging) return;
+    if (!dragging.current) return;
+
+    const current = measure();
     const x = xFromPointer(event.clientX);
     if (Math.abs(x - dragStartX.current) > 10) suppressClick.current = true;
-    setDragX(x);
-    setPreviewIndex(indexFromX(x));
-    updatePhysics(x);
+
+    const now = performance.now();
+    const elapsed = Math.max(8, now - lastDrag.current.time);
+    const delta = x - lastDrag.current.x;
+    const speed = delta / elapsed;
+
+    const snapPoint = Math.round(x / current.step) * current.step;
+    const stretch = stretchFactor(speed, x - snapPoint, current.step);
+    // 高光被甩到运动方向的后方，像光斑追不上玻璃。
+    const shine = Math.min(80, Math.max(20, 50 - (delta / Math.max(1, current.step)) * 70));
+    const origin = delta >= 0 ? 18 : 82;
+
+    lastDrag.current = { x, time: now, velocity: speed };
+    paint(x, stretch, shine, origin);
+
+    const next = indexFromX(x);
+    setPreviewIndex((previous) => (previous === next ? previous : next));
   }
 
   function finishDrag(event: React.PointerEvent<HTMLElement>) {
-    if (!isDragging) return;
+    if (!dragging.current) return;
+
+    const current = measure();
     const x = xFromPointer(event.clientX);
-    selectFromX(x);
-    setDragX(null);
-    setPreviewIndex(null);
-    setDragPhysics({ scale: 1, shine: 50, origin: 50 });
+    const velocity = lastDrag.current.velocity;
+
+    const index = targetIndex(x, current.step, velocity, TABS.length);
+
+    dragging.current = false;
     setIsDragging(false);
+    setPreviewIndex(null);
+    clearPaint();
     event.currentTarget.releasePointerCapture(event.pointerId);
+
+    if (TABS[index].page !== page) {
+      tapFeedback();
+      onChange(TABS[index].page);
+    }
   }
 
   function handleTabClick(tabPage: Page) {
@@ -221,13 +273,14 @@ function LiquidTabBar({ page, onChange }: { page: Page; onChange: (page: Page) =
       suppressClick.current = false;
       return;
     }
+    if (tabPage !== page) tapFeedback();
     onChange(tabPage);
   }
 
   return (
     <nav
       ref={navRef}
-      className={`tabbar three-tabs ${isDragging ? "dragging" : ""}`}
+      className={`tabbar three-tabs ${isDragging ? "dragging" : ""} ${compact ? "compact" : ""}`}
       aria-label="主要导航"
       style={{ "--active-index": activeIndex, "--tab-count": TABS.length } as React.CSSProperties}
       onPointerDown={handlePointerDown}
@@ -235,18 +288,7 @@ function LiquidTabBar({ page, onChange }: { page: Page; onChange: (page: Page) =
       onPointerUp={finishDrag}
       onPointerCancel={finishDrag}
     >
-      <div
-        className="liquid-indicator"
-        style={
-          dragX === null
-            ? ({ "--shine-x": `${dragPhysics.shine}%` } as React.CSSProperties)
-            : ({
-                "--shine-x": `${dragPhysics.shine}%`,
-                transform: `translate3d(${dragX}px, 0, 0) scaleX(${dragPhysics.scale})`,
-                transformOrigin: `${dragPhysics.origin}% 50%`
-              } as React.CSSProperties)
-        }
-      />
+      <div className="liquid-indicator" ref={indicatorRef} />
       <div className="tabbar-tabs">
         {TABS.map((tab, index) => (
           <button

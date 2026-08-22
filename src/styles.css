@@ -822,6 +822,23 @@ select:focus {
   touch-action: pan-y;
   user-select: none;
   isolation: isolate;
+  transform-origin: 50% 100%;
+  transition:
+    transform 320ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 320ms ease;
+}
+
+/* 向下滚动时收起：缩小并沉下去，让位给内容 */
+.tabbar.compact {
+  transform: translate3d(0, 10px, 0) scale(0.84);
+  opacity: 0.9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tabbar,
+  .liquid-indicator {
+    transition-duration: 1ms;
+  }
 }
 
 /* 斜向高光。只用渐变，不再叠第二层 backdrop-filter——
@@ -866,7 +883,7 @@ select:focus {
   box-shadow: inset 0 1px 1px rgba(60, 60, 67, 0.06);
   transform: translate3d(calc(var(--active-index) * (100% + 6px)), 0, 0);
   transition:
-    transform 430ms cubic-bezier(0.16, 1.18, 0.24, 1),
+    transform 460ms cubic-bezier(0.18, 1.32, 0.28, 1),
     border-radius 220ms ease,
     filter 220ms ease;
 }
@@ -875,14 +892,32 @@ select:focus {
   width: calc((100% - 14px - 12px) / 3);
 }
 
-.liquid-indicator::before,
-.liquid-indicator::after {
-  content: none;
+.liquid-indicator::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  /* 跟手的光斑：拖动时 --shine-x 被实时改写，光像追不上玻璃一样往后甩 */
+  background: radial-gradient(
+    62% 120% at var(--shine-x, 50%) 6%,
+    rgba(255, 255, 255, 0.95),
+    rgba(255, 255, 255, 0.35) 42%,
+    rgba(255, 255, 255, 0) 72%
+  );
+  opacity: 0;
+  transition: opacity 260ms ease;
+  pointer-events: none;
+}
+
+.tabbar.dragging .liquid-indicator::before {
+  opacity: 1;
+  transition: opacity 120ms ease;
 }
 
 .tabbar.dragging .liquid-indicator {
   border-radius: 999px;
   filter: brightness(0.98);
+  /* 拖动中去掉 transform 过渡，否则滑块会滞后于手指 */
   transition:
     border-radius 90ms ease,
     filter 90ms ease;

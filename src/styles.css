@@ -1113,3 +1113,62 @@ select:focus {
   grid-template-columns: 1fr 1.4fr;
   gap: 10px;
 }
+
+.icon-button.danger {
+  color: var(--red);
+}
+
+.primary-button.danger {
+  background: var(--red);
+  box-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.05),
+    0 12px 30px rgba(255, 59, 48, 0.22);
+}
+
+.sheet-copy {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.restore-strip {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 448px;
+  margin: 0 auto;
+  padding: 14px 16px;
+  border: 1px solid var(--hairline);
+  border-radius: 20px;
+  background: var(--glass-strong);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: saturate(180%) blur(14px);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+}
+
+.restore-strip div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.restore-strip span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.restore-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ghost-button.strong {
+  color: var(--accent);
+}

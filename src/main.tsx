@@ -3,7 +3,8 @@ import { createRoot } from "react-dom/client";
 import { downloadCsv } from "./exportCsv";
 import { categoryOptions, parseNaturalLanguage, toDateInputValue } from "./parser";
 import { buildImportPreview, type ImportPreview } from "./importCsv";
-import { addEntries, addEntry, deleteEntry, getEntries } from "./storage";
+import { dropBackup, readBackup, saveBackup, type Backup } from "./backup";
+import { addEntries, addEntry, clearEntries, deleteEntry, getEntries } from "./storage";
 import { CATEGORIES, type Category, type EntryType, type LedgerEntry, type Page, type ParsedEntry } from "./types";
 import { registerServiceWorker } from "./pwa";
 import "./styles.css";
@@ -65,6 +66,11 @@ function App() {
     await refresh();
   }
 
+  async function handleClear() {
+    await clearEntries();
+    await refresh();
+  }
+
   return (
     <div className="app-shell">
       <main className="screen">
@@ -79,7 +85,12 @@ function App() {
           />
         )}
         {page === "monthly" && (
-          <MonthlyStats entries={entries} onExport={() => downloadCsv(entries)} onImport={handleImport} />
+          <MonthlyStats
+            entries={entries}
+            onExport={() => downloadCsv(entries)}
+            onImport={handleImport}
+            onClear={handleClear}
+          />
         )}
         {page === "categories" && <CategoryStats entries={entries} />}
       </main>
@@ -518,6 +529,112 @@ function Home(props: {
   );
 }
 
+function ClearButton({
+  entries,
+  onImport,
+  onClear
+}: {
+  entries: LedgerEntry[];
+  onImport: (imported: LedgerEntry[]) => Promise<void>;
+  onClear: () => Promise<void>;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const [working, setWorking] = useState(false);
+  const [backup, setBackup] = useState<Backup | null>(() => readBackup());
+  const [restoring, setRestoring] = useState(false);
+
+  async function confirmClear() {
+    setWorking(true);
+
+    // 顺序很重要：备份先落地，再触发下载，最后才动数据。
+    const saved = saveBackup(entries);
+    if (!saved) {
+      setWorking(false);
+      window.alert("备份没能写入本机存储，已取消清空。");
+      return;
+    }
+
+    downloadCsv(entries);
+    await onClear();
+
+    setBackup(saved);
+    setWorking(false);
+    setConfirming(false);
+  }
+
+  async function restore() {
+    if (!backup) return;
+    setRestoring(true);
+
+    const preview = buildImportPreview(backup.csv, entries);
+    await onImport(preview.fresh);
+
+    setRestoring(false);
+    dropBackup();
+    setBackup(null);
+  }
+
+  return (
+    <>
+      <button
+        className="icon-button danger"
+        onClick={() => setConfirming(true)}
+        disabled={!entries.length}
+        aria-label="清空账单"
+      >
+        清空
+      </button>
+
+      {backup && (
+        <div className="restore-strip">
+          <div>
+            <strong>备份还在</strong>
+            <span>
+              {backup.count} 条 · {backup.savedAt.slice(0, 10)} 清空
+            </span>
+          </div>
+          <div className="restore-actions">
+            <button
+              className="ghost-button"
+              onClick={() => {
+                dropBackup();
+                setBackup(null);
+              }}
+              disabled={restoring}
+            >
+              删除
+            </button>
+            <button className="ghost-button strong" onClick={restore} disabled={restoring}>
+              {restoring ? "恢复中…" : "恢复"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {confirming && (
+        <div className="sheet-backdrop" role="dialog" aria-modal="true" aria-label="清空账单">
+          <div className="sheet">
+            <p className="eyebrow">危险操作</p>
+            <h2>清空全部账单</h2>
+            <p className="sheet-copy">
+              将删除 {entries.length} 条记录。清空前会自动备份到本机，并导出一份 CSV 文件。
+              手机上导出有时只是弹出分享面板，不一定真的存下来了——本机那份备份是保底，清空后可以一键恢复。
+            </p>
+            <div className="sheet-actions">
+              <button className="secondary-button light" onClick={() => setConfirming(false)} disabled={working}>
+                取消
+              </button>
+              <button className="primary-button danger" onClick={confirmClear} disabled={working}>
+                {working ? "处理中…" : "备份并清空"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 function ImportButton({
   entries,
   onImport
@@ -602,11 +719,13 @@ function ImportButton({
 function MonthlyStats({
   entries,
   onExport,
-  onImport
+  onImport,
+  onClear
 }: {
   entries: LedgerEntry[];
   onExport: () => void;
   onImport: (imported: LedgerEntry[]) => Promise<void>;
+  onClear: () => Promise<void>;
 }) {
   const rows = useMemo(() => {
     const map = new Map<string, { month: string; income: number; expense: number }>();
@@ -639,6 +758,7 @@ function MonthlyStats({
           <h1>月度统计</h1>
         </div>
         <div className="header-actions">
+          <ClearButton entries={entries} onImport={onImport} onClear={onClear} />
           <ImportButton entries={entries} onImport={onImport} />
           <button className="icon-button" onClick={onExport} disabled={!entries.length} aria-label="导出 CSV">
             导出

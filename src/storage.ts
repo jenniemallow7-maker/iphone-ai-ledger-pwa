@@ -72,3 +72,9 @@ export async function addEntries(entries: LedgerEntry[]): Promise<void> {
     entries.forEach((entry) => store.put(entry));
   });
 }
+
+export async function clearEntries(): Promise<void> {
+  await withStore("readwrite", (store) => {
+    store.clear();
+  });
+}

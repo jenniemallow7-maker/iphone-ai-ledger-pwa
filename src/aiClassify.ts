@@ -3,7 +3,7 @@ import { CATEGORIES } from "./types";
 
 const TOGGLE_KEY = "ai-ledger-ai-mode";
 const CACHE_KEY = "ai-ledger-ai-cache";
-const TIMEOUT_MS = 3000;
+const TIMEOUT_MS = 6000;
 
 export function isAiMode(): boolean {
   try {

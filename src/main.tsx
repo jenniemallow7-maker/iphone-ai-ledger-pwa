@@ -257,7 +257,7 @@ function LiquidTabBar({ page, onChange }: { page: Page; onChange: (page: Page) =
             onClick={() => handleTabClick(tab.page)}
           >
             <span className="tab-icon"><TabIcon name={tab.icon} /></span>
-            {tab.label}
+            <span className="sr-only">{tab.label}</span>
           </button>
         ))}
       </div>

@@ -800,14 +800,14 @@ select:focus {
   z-index: 10;
   max-width: 448px;
   margin: 0 auto;
-  padding: 8px;
+  padding: 7px;
   column-gap: 6px;
   border: 0.5px solid rgba(255, 255, 255, 0.55);
-  border-radius: 29px;
+  border-radius: 999px;
   /* 更透一点、饱和度拉高：让身后的内容透上来染色，玻璃才会「活」 */
-  background: rgba(255, 255, 255, 0.52);
-  backdrop-filter: blur(40px) saturate(1.9);
-  -webkit-backdrop-filter: blur(40px) saturate(1.9);
+  background: rgba(255, 255, 255, 0.62);
+  backdrop-filter: blur(40px) saturate(1.75);
+  -webkit-backdrop-filter: blur(40px) saturate(1.75);
   box-shadow:
     /* 镜面：上缘受光、下缘回光 */
     inset 0 1px 0 rgba(255, 255, 255, 0.92),
@@ -855,23 +855,15 @@ select:focus {
   --shine-x: 50%;
   position: absolute;
   z-index: 1;
-  top: 8px;
-  bottom: 8px;
-  left: 8px;
-  width: calc((100% - 16px - 18px) / 4);
-  border: 0.5px solid rgba(255, 255, 255, 0.7);
-  border-radius: 22px;
-  /* 选中块是「更厚的一块玻璃」：更白、镜面更强，浮在底板上方 */
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.68)),
-    rgba(255, 255, 255, 0.5);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.95),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 0 10px rgba(120, 130, 150, 0.08),
-    0 1px 1px rgba(0, 0, 0, 0.05),
-    0 8px 18px rgba(0, 0, 0, 0.08),
-    0 16px 34px rgba(0, 0, 0, 0.06);
+  top: 7px;
+  bottom: 7px;
+  left: 7px;
+  width: calc((100% - 14px - 18px) / 4);
+  border: 0;
+  border-radius: 999px;
+  /* 选中态是一块凹进去的浅灰胶囊，不抢图标 */
+  background: rgba(60, 60, 67, 0.09);
+  box-shadow: inset 0 1px 1px rgba(60, 60, 67, 0.06);
   transform: translate3d(calc(var(--active-index) * (100% + 6px)), 0, 0);
   transition:
     transform 430ms cubic-bezier(0.16, 1.18, 0.24, 1),
@@ -880,7 +872,7 @@ select:focus {
 }
 
 .tabbar.three-tabs .liquid-indicator {
-  width: calc((100% - 16px - 12px) / 3);
+  width: calc((100% - 14px - 12px) / 3);
 }
 
 .liquid-indicator::before,
@@ -889,17 +881,17 @@ select:focus {
 }
 
 .tabbar.dragging .liquid-indicator {
-  border-radius: 24px;
-  filter: brightness(1.05) saturate(1.1);
+  border-radius: 999px;
+  filter: brightness(0.98);
   transition:
     border-radius 90ms ease,
     filter 90ms ease;
 }
 
 .tab {
-  min-height: 58px;
+  min-height: 50px;
   border: 0;
-  border-radius: 22px;
+  border-radius: 999px;
   color: var(--muted);
   background: transparent;
   font-size: 12px;
@@ -926,15 +918,15 @@ select:focus {
 
 .tab-icon {
   display: grid;
-  width: 21px;
-  height: 21px;
+  width: 26px;
+  height: 26px;
   place-items: center;
   transition: transform 180ms ease;
 }
 
 .tab-icon svg {
-  width: 20px;
-  height: 20px;
+  width: 25px;
+  height: 25px;
 }
 
 .tab.active,

@@ -912,27 +912,28 @@ function CategoryStats({ entries }: { entries: LedgerEntry[] }) {
 
   return (
     <section className="page">
-      <header className="plain-header">
-        <p className="eyebrow">支出结构</p>
-        <h1>分类统计</h1>
-      </header>
-
-      <div className="range-picker" role="tablist" aria-label="统计范围">
-        {RANGES.map((item) => (
-          <button
-            key={item.key}
-            role="tab"
-            aria-selected={range === item.key}
-            className={range === item.key ? "active" : ""}
-            onClick={() => {
-              setRange(item.key);
+      <header className="app-header plain-header">
+        <div>
+          <p className="eyebrow">支出结构</p>
+          <h1>分类统计</h1>
+        </div>
+        <label className="range-select">
+          <span className="sr-only">统计范围</span>
+          <select
+            value={range}
+            onChange={(event) => {
+              setRange(event.target.value as RangeKey);
               setOpenCategory(null);
             }}
           >
-            {item.label}
-          </button>
-        ))}
-      </div>
+            {RANGES.map((item) => (
+              <option key={item.key} value={item.key}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </header>
 
       {rows.length === 0 ? (
         <p className="empty">这段时间还没有支出记录。</p>

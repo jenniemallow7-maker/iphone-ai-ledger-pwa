@@ -10,6 +10,8 @@
   --income: #2e9c58;
   --expense: #1d1d1f;
   --orange: #ff9500;
+  --bar-expense: rgba(29, 29, 31, 0.34);
+  --bar-income: rgba(46, 156, 88, 0.42);
   --red: #ff3b30;
   --shadow-soft:
     0 1px 1px rgba(0, 0, 0, 0.04),
@@ -782,11 +784,11 @@ select:focus {
 }
 
 .bar-fill.income {
-  background: var(--income);
+  background: var(--bar-income);
 }
 
 .bar-fill.expense {
-  background: var(--expense);
+  background: var(--bar-expense);
 }
 
 .tabbar {
@@ -1196,38 +1198,40 @@ select:focus {
   box-shadow: 0 6px 18px rgba(var(--accent-rgb), 0.32);
 }
 
-.range-picker {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
-  padding: 4px;
+.range-select {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.range-select select {
+  height: 38px;
+  padding: 0 30px 0 14px;
   border: 1px solid var(--hairline);
   border-radius: 999px;
-  background: var(--glass);
-  box-shadow: var(--shadow-soft);
-}
-
-.range-picker button {
-  min-height: 36px;
-  border: 0;
-  border-radius: 999px;
-  color: var(--muted);
-  font-size: 14px;
-  font-weight: 600;
-  background: transparent;
-  transition:
-    color 0.2s ease,
-    background 0.2s ease;
-}
-
-.range-picker button.active {
   color: var(--ink);
-  background: var(--glass-strong);
+  font-size: 14px;
+  font-weight: 650;
+  background-color: var(--glass-strong);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1.5 6 6.5l5-5' fill='none' stroke='rgba(110,110,115,0.9)' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
   box-shadow: var(--shadow-soft);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .range-total {
-  margin: 0;
+  margin: -4px 0 0;
   padding: 0 4px;
   color: var(--muted);
   font-size: 13px;
@@ -1258,7 +1262,7 @@ select:focus {
 .category-detail {
   margin: 14px 0 0;
   padding: 14px 0 0;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  border-top: 1px solid rgba(60, 60, 67, 0.1);
   list-style: none;
   display: flex;
   flex-direction: column;

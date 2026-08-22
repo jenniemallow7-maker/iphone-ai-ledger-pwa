@@ -2,7 +2,7 @@
 // API key 只存在于服务端环境变量，永远不会出现在前端 bundle 里。
 
 const CATEGORIES = ["餐饮", "交通", "购物", "娱乐", "住房", "医疗", "通讯", "教育", "人情", "其他"];
-const MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 
 interface Item {

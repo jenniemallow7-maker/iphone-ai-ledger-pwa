@@ -4,6 +4,7 @@ import { downloadCsv } from "./exportCsv";
 import { categoryOptions, parseNaturalLanguage, toDateInputValue } from "./parser";
 import { buildImportPreview, type ImportPreview } from "./importCsv";
 import { dropBackup, readBackup, saveBackup, type Backup } from "./backup";
+import { classifyRemote, isAiMode, setAiMode } from "./aiClassify";
 import { addEntries, addEntry, clearEntries, deleteEntry, getEntries } from "./storage";
 import { CATEGORIES, type Category, type EntryType, type LedgerEntry, type Page, type ParsedEntry } from "./types";
 import { registerServiceWorker } from "./pwa";
@@ -275,6 +276,9 @@ function Home(props: {
   const recent = props.entries.slice(0, 8);
   const [quickText, setQuickText] = useState("");
   const [quickDraft, setQuickDraft] = useState<ParsedEntry>(() => parseNaturalLanguage(""));
+  const [aiMode, setAiModeState] = useState(() => isAiMode());
+  const [isAsking, setIsAsking] = useState(false);
+  const askIdRef = useRef(0);
   const [isQuickParsing, setIsQuickParsing] = useState(false);
   const [isSavingQuickEntry, setIsSavingQuickEntry] = useState(false);
   const [monthlyBudget, setMonthlyBudget] = useState(() => {
@@ -302,17 +306,46 @@ function Home(props: {
   useEffect(() => {
     if (!quickText.trim()) {
       setIsQuickParsing(false);
+      setIsAsking(false);
       return;
     }
 
     setIsQuickParsing(true);
+    let cancelled = false;
+
     const timer = window.setTimeout(() => {
-      setQuickDraft(parseNaturalLanguage(quickText));
+      // 规则先出结果，界面不等网络。
+      const parsed = parseNaturalLanguage(quickText);
+      setQuickDraft(parsed);
       setIsQuickParsing(false);
+
+      if (!aiMode || parsed.type === "income") {
+        setIsAsking(false);
+        return;
+      }
+
+      // 每次请求领一个编号。边打字边请求时，只有最新那次的结果和状态算数，
+      // 旧请求回来时编号已经变了，既不会改分类，也不会把「判断中」误关掉。
+      const askId = askIdRef.current + 1;
+      askIdRef.current = askId;
+      setIsAsking(true);
+
+      // 失败、超时、离线都返回 null，界面保持规则的结果。
+      classifyRemote(parsed.note, parsed.amount)
+        .then((category) => {
+          if (cancelled || askIdRef.current !== askId || !category) return;
+          setQuickDraft((draft) => (draft.note === parsed.note ? { ...draft, category } : draft));
+        })
+        .finally(() => {
+          if (askIdRef.current === askId) setIsAsking(false);
+        });
     }, 300);
 
-    return () => window.clearTimeout(timer);
-  }, [quickText]);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [quickText, aiMode]);
 
   function updateBudget(value: number) {
     const normalized = Number.isFinite(value) && value > 0 ? value : 0;
@@ -436,7 +469,19 @@ function Home(props: {
       <section className="quick-entry">
         <div className="quick-entry-heading">
           <label htmlFor="quick-entry">一句话快速记账</label>
-          <span>自动识别</span>
+          <button
+            type="button"
+            className={`ai-toggle ${aiMode ? "on" : ""}`}
+            onClick={() => {
+              const next = !aiMode;
+              setAiModeState(next);
+              setAiMode(next);
+            }}
+            aria-pressed={aiMode}
+            title={aiMode ? "AI 分类已开启，联网时用模型判断分类" : "AI 分类已关闭，只用内置规则"}
+          >
+            AI
+          </button>
         </div>
         <div className="quick-entry-box">
           <input
@@ -447,7 +492,15 @@ function Home(props: {
           />
         </div>
         <p className={`quick-parse-status ${isQuickParsing ? "is-parsing" : ""}`} role="status">
-          {isQuickParsing ? "正在识别..." : quickText.trim() ? "已识别，可直接修改后记账" : "也可以直接填写金额和分类"}
+          {isQuickParsing
+            ? "正在识别..."
+            : isAsking
+              ? "AI 判断中…"
+              : quickText.trim()
+                ? aiMode
+                  ? "已识别，可直接修改后记账"
+                  : "已识别（内置规则），可直接修改后记账"
+                : "也可以直接填写金额和分类"}
         </p>
         <div className="quick-fields">
           <label className="quick-amount-field" htmlFor="quick-amount">

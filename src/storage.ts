@@ -65,3 +65,10 @@ export async function deleteEntry(id: string): Promise<void> {
     store.delete(id);
   });
 }
+
+export async function addEntries(entries: LedgerEntry[]): Promise<void> {
+  if (!entries.length) return;
+  await withStore("readwrite", (store) => {
+    entries.forEach((entry) => store.put(entry));
+  });
+}

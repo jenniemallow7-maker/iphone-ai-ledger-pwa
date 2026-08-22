@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { downloadCsv } from "./exportCsv";
 import { categoryOptions, parseNaturalLanguage, toDateInputValue } from "./parser";
-import { addEntry, deleteEntry, getEntries } from "./storage";
+import { buildImportPreview, type ImportPreview } from "./importCsv";
+import { addEntries, addEntry, deleteEntry, getEntries } from "./storage";
 import { CATEGORIES, type Category, type EntryType, type LedgerEntry, type Page, type ParsedEntry } from "./types";
 import { registerServiceWorker } from "./pwa";
 import "./styles.css";
@@ -59,6 +60,11 @@ function App() {
     await refresh();
   }
 
+  async function handleImport(imported: LedgerEntry[]) {
+    await addEntries(imported);
+    await refresh();
+  }
+
   return (
     <div className="app-shell">
       <main className="screen">
@@ -72,7 +78,9 @@ function App() {
             onDelete={handleDelete}
           />
         )}
-        {page === "monthly" && <MonthlyStats entries={entries} onExport={() => downloadCsv(entries)} />}
+        {page === "monthly" && (
+          <MonthlyStats entries={entries} onExport={() => downloadCsv(entries)} onImport={handleImport} />
+        )}
         {page === "categories" && <CategoryStats entries={entries} />}
       </main>
       <LiquidTabBar page={page} onChange={setPage} />
@@ -510,7 +518,96 @@ function Home(props: {
   );
 }
 
-function MonthlyStats({ entries, onExport }: { entries: LedgerEntry[]; onExport: () => void }) {
+function ImportButton({
+  entries,
+  onImport
+}: {
+  entries: LedgerEntry[];
+  onImport: (imported: LedgerEntry[]) => Promise<void>;
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [preview, setPreview] = useState<ImportPreview | null>(null);
+  const [fileName, setFileName] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function handleFile(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    const text = await file.text();
+    setFileName(file.name);
+    setPreview(buildImportPreview(text, entries));
+  }
+
+  async function confirmImport() {
+    if (!preview) return;
+    setSaving(true);
+    await onImport(preview.fresh);
+    setSaving(false);
+    setPreview(null);
+  }
+
+  return (
+    <>
+      <button className="icon-button" onClick={() => inputRef.current?.click()} aria-label="导入 CSV">
+        导入
+      </button>
+      <input ref={inputRef} type="file" accept=".csv,text/csv" className="hidden-file-input" onChange={handleFile} />
+      {preview && (
+        <div className="sheet-backdrop" role="dialog" aria-modal="true" aria-label="导入预览">
+          <div className="sheet">
+            <p className="eyebrow">{fileName}</p>
+            <h2>导入预览</h2>
+            <ul className="import-summary">
+              <li>
+                <span>可导入</span>
+                <b>{preview.fresh.length} 条</b>
+              </li>
+              <li>
+                <span>重复跳过</span>
+                <b>{preview.duplicates} 条</b>
+              </li>
+              <li>
+                <span>无法识别</span>
+                <b>{preview.issues.length} 行</b>
+              </li>
+            </ul>
+            {preview.issues.length > 0 && (
+              <div className="import-issues">
+                {preview.issues.slice(0, 5).map((issue) => (
+                  <p key={`${issue.line}-${issue.reason}`}>
+                    {issue.line > 0 ? `第 ${issue.line} 行 · ` : ""}
+                    {issue.reason}
+                  </p>
+                ))}
+                {preview.issues.length > 5 && <p>另有 {preview.issues.length - 5} 行同样被跳过。</p>}
+              </div>
+            )}
+            <div className="sheet-actions">
+              <button className="secondary-button light" onClick={() => setPreview(null)} disabled={saving}>
+                取消
+              </button>
+              <button className="primary-button" onClick={confirmImport} disabled={saving || !preview.fresh.length}>
+                {saving ? "导入中…" : `导入 ${preview.fresh.length} 条`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function MonthlyStats({
+  entries,
+  onExport,
+  onImport
+}: {
+  entries: LedgerEntry[];
+  onExport: () => void;
+  onImport: (imported: LedgerEntry[]) => Promise<void>;
+}) {
   const rows = useMemo(() => {
     const map = new Map<string, { month: string; income: number; expense: number }>();
     entries.forEach((entry) => {
@@ -541,9 +638,12 @@ function MonthlyStats({ entries, onExport }: { entries: LedgerEntry[]; onExport:
           <p className="eyebrow">趋势</p>
           <h1>月度统计</h1>
         </div>
-        <button className="icon-button" onClick={onExport} disabled={!entries.length} aria-label="导出 CSV">
-          CSV
-        </button>
+        <div className="header-actions">
+          <ImportButton entries={entries} onImport={onImport} />
+          <button className="icon-button" onClick={onExport} disabled={!entries.length} aria-label="导出 CSV">
+            导出
+          </button>
+        </div>
       </header>
       <section className="year-card">
         <div className="balance-topline">

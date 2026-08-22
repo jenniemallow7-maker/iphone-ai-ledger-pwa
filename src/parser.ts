@@ -176,6 +176,14 @@ export function parseNaturalLanguage(text: string): ParsedEntry {
   };
 }
 
+/**
+ * 只推断分类，不碰收支方向。给「重新分类已有记录」这种场景用——
+ * 那时候类型已经定了，不该被文本里的措辞改掉。
+ */
+export function categorizeNote(text: string): Category {
+  return inferCategory(text);
+}
+
 export function categoryOptions() {
   return CATEGORIES;
 }

@@ -1,4 +1,16 @@
-export const CATEGORIES = ["餐饮", "交通", "购物", "娱乐", "住房", "收入", "其他"] as const;
+export const CATEGORIES = [
+  "餐饮",
+  "交通",
+  "购物",
+  "娱乐",
+  "住房",
+  "医疗",
+  "通讯",
+  "教育",
+  "人情",
+  "收入",
+  "其他"
+] as const;
 
 export type Category = (typeof CATEGORIES)[number];
 export type EntryType = "expense" | "income";

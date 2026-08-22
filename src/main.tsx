@@ -862,13 +862,53 @@ function MonthlyStats({
   );
 }
 
+type RangeKey = "month" | "quarter" | "year" | "all";
+
+const RANGES: Array<{ key: RangeKey; label: string }> = [
+  { key: "month", label: "本月" },
+  { key: "quarter", label: "近三月" },
+  { key: "year", label: "今年" },
+  { key: "all", label: "全部" }
+];
+
+function rangeStart(range: RangeKey, now = new Date()): string | null {
+  if (range === "all") return null;
+
+  const start = new Date(now);
+  if (range === "month") start.setDate(1);
+  if (range === "quarter") start.setMonth(start.getMonth() - 2, 1);
+  if (range === "year") start.setMonth(0, 1);
+
+  return toDateInputValue(start);
+}
+
 function CategoryStats({ entries }: { entries: LedgerEntry[] }) {
-  const expenseEntries = entries.filter((entry) => entry.type === "expense");
-  const rows = CATEGORIES.filter((category) => category !== "收入").map((category) => ({
-    category,
-    total: expenseEntries.filter((entry) => entry.category === category).reduce((sum, entry) => sum + entry.amount, 0)
-  })).sort((a, b) => b.total - a.total);
+  const [range, setRange] = useState<RangeKey>("month");
+  const [openCategory, setOpenCategory] = useState<Category | null>(null);
+
+  const expenseEntries = useMemo(() => {
+    const from = rangeStart(range);
+    return entries.filter((entry) => entry.type === "expense" && (!from || entry.date >= from));
+  }, [entries, range]);
+
+  const rows = useMemo(
+    () =>
+      CATEGORIES.filter((category) => category !== "收入")
+        .map((category) => {
+          const own = expenseEntries.filter((entry) => entry.category === category);
+          return {
+            category,
+            total: own.reduce((sum, entry) => sum + entry.amount, 0),
+            entries: own.sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
+          };
+        })
+        .filter((row) => row.total > 0)
+        .sort((a, b) => b.total - a.total),
+    [expenseEntries]
+  );
+
   const max = Math.max(1, ...rows.map((row) => row.total));
+  const grandTotal = rows.reduce((sum, row) => sum + row.total, 0);
 
   return (
     <section className="page">
@@ -876,19 +916,71 @@ function CategoryStats({ entries }: { entries: LedgerEntry[] }) {
         <p className="eyebrow">支出结构</p>
         <h1>分类统计</h1>
       </header>
-      {expenseEntries.length === 0 && <p className="empty">支出分类会在这里汇总，帮你看清钱花到哪里了。</p>}
-      <div className="stats-list">
-        {rows.map((row) => (
-          <article className="category-row" key={row.category}>
-            <div className="stat-heading">
-              <strong>{row.category}</strong>
-              <span className="expense">{currency.format(row.total)}</span>
-            </div>
-            <div className="bar-track">
-              <div className="bar-fill expense" style={{ width: `${Math.max(4, (row.total / max) * 100)}%` }} />
-            </div>
-          </article>
+
+      <div className="range-picker" role="tablist" aria-label="统计范围">
+        {RANGES.map((item) => (
+          <button
+            key={item.key}
+            role="tab"
+            aria-selected={range === item.key}
+            className={range === item.key ? "active" : ""}
+            onClick={() => {
+              setRange(item.key);
+              setOpenCategory(null);
+            }}
+          >
+            {item.label}
+          </button>
         ))}
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="empty">这段时间还没有支出记录。</p>
+      ) : (
+        <p className="range-total">
+          共 {expenseEntries.length} 笔 · {currency.format(grandTotal)}
+        </p>
+      )}
+
+      <div className="stats-list">
+        {rows.map((row) => {
+          const open = openCategory === row.category;
+
+          return (
+            <article className={`category-row ${open ? "open" : ""}`} key={row.category}>
+              <button
+                className="category-toggle"
+                onClick={() => setOpenCategory(open ? null : row.category)}
+                aria-expanded={open}
+              >
+                <div className="stat-heading">
+                  <strong>
+                    {row.category}
+                    <em>{row.entries.length} 笔</em>
+                  </strong>
+                  <span className="expense">{currency.format(row.total)}</span>
+                </div>
+                <div className="bar-track">
+                  <div className="bar-fill expense" style={{ width: `${Math.max(4, (row.total / max) * 100)}%` }} />
+                </div>
+              </button>
+
+              {open && (
+                <ul className="category-detail">
+                  {row.entries.map((entry) => (
+                    <li key={entry.id}>
+                      <div>
+                        <strong>{entry.note}</strong>
+                        <span>{entry.date}</span>
+                      </div>
+                      <b>{currency.format(entry.amount)}</b>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </article>
+          );
+        })}
       </div>
     </section>
   );

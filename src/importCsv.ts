@@ -66,8 +66,20 @@ function parseCsv(text: string): string[][] {
   return rows.filter((cells) => cells.some((cell) => cell.trim().length));
 }
 
-function fingerprint(entry: { date: string; amount: number; category: string; note: string; type: EntryType }) {
-  return [entry.date, entry.type, entry.amount.toFixed(2), entry.category, entry.note.trim()].join("|");
+/**
+ * 创建时间也算进去。少了它，同一天同金额同备注的两笔独立消费会被当成重复
+ * 丢掉一笔——「8 月 15 日两次买游戏各 2 元」就是真实会发生的情况。
+ * 导出的 CSV 一直带着创建时间，所以重复导入同一份文件照样能正确去重。
+ */
+function fingerprint(entry: {
+  date: string;
+  amount: number;
+  category: string;
+  note: string;
+  type: EntryType;
+  createdAt: string;
+}) {
+  return [entry.date, entry.type, entry.amount.toFixed(2), entry.category, entry.note.trim(), entry.createdAt].join("|");
 }
 
 function uid() {

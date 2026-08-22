@@ -1195,3 +1195,104 @@ select:focus {
   background: var(--accent);
   box-shadow: 0 6px 18px rgba(var(--accent-rgb), 0.32);
 }
+
+.range-picker {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: var(--glass);
+  box-shadow: var(--shadow-soft);
+}
+
+.range-picker button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  background: transparent;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+}
+
+.range-picker button.active {
+  color: var(--ink);
+  background: var(--glass-strong);
+  box-shadow: var(--shadow-soft);
+}
+
+.range-total {
+  margin: 0;
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.category-toggle {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  text-align: left;
+  background: transparent;
+}
+
+.stat-heading strong em {
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 500;
+}
+
+.category-row.open {
+  box-shadow: var(--shadow-card);
+}
+
+.category-detail {
+  margin: 14px 0 0;
+  padding: 14px 0 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.category-detail li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.category-detail li div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.category-detail strong {
+  overflow: hidden;
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-detail span {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.category-detail b {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}

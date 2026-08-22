@@ -103,18 +103,54 @@ function App() {
   );
 }
 
-function TabIcon({ name }: { name: TabIconName }) {
+function TabIcon({ name, filled }: { name: TabIconName; filled: boolean }) {
   const common = { fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
 
+  // 选中的图标改成实心。实测原生标签栏就是这样标记选中的，
+  // 比只挪一块灰底更容易一眼看出当前在哪一页。
   if (name === "home") {
-    return <svg viewBox="0 0 24 24" aria-hidden="true"><path {...common} d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10Z" /><path {...common} d="M9 21v-6h6v6" /></svg>;
+    return filled ? (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="currentColor" d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-6H10v6H4a1 1 0 0 1-1-1V10Z" />
+      </svg>
+    ) : (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path {...common} d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10Z" />
+        <path {...common} d="M9 21v-6h6v6" />
+      </svg>
+    );
   }
 
   if (name === "monthly") {
-    return <svg viewBox="0 0 24 24" aria-hidden="true"><rect {...common} x="3" y="5" width="18" height="16" rx="3" /><path {...common} d="M7 3v4M17 3v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" /></svg>;
+    return filled ? (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="currentColor" d="M6 3a1 1 0 0 1 1 1v1h10V4a1 1 0 1 1 2 0v1.1A3 3 0 0 1 21 8v1H3V8a3 3 0 0 1 2-2.83V4a1 1 0 0 1 1-1Z" />
+        <path
+          fill="currentColor"
+          fillRule="evenodd"
+          d="M3 11h18v7a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3v-7Zm4 3.5a1 1 0 1 0 2 0 1 1 0 0 0-2 0Zm4 0a1 1 0 1 0 2 0 1 1 0 0 0-2 0Zm4 0a1 1 0 1 0 2 0 1 1 0 0 0-2 0Zm-8 4a1 1 0 1 0 2 0 1 1 0 0 0-2 0Zm4 0a1 1 0 1 0 2 0 1 1 0 0 0-2 0Z"
+          clipRule="evenodd"
+        />
+      </svg>
+    ) : (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect {...common} x="3" y="5" width="18" height="16" rx="3" />
+        <path {...common} d="M7 3v4M17 3v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" />
+      </svg>
+    );
   }
 
-  return <svg viewBox="0 0 24 24" aria-hidden="true"><path {...common} d="M4 20V10M10 20V4M16 20v-7M22 20H2" /><path {...common} d="M4 7h0M10 2h0M16 11h0" /></svg>;
+  return filled ? (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" d="M2 19h20a1 1 0 1 1 0 2H2a1 1 0 1 1 0-2Z" />
+      <path fill="currentColor" d="M3 10h2v7H3zM9 4h2v13H9zM15 13h2v4h-2z" />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path {...common} d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+      <path {...common} d="M4 7h0M10 2h0M16 11h0" />
+    </svg>
+  );
 }
 
 function LiquidTabBar({ page, onChange }: { page: Page; onChange: (page: Page) => void }) {
@@ -298,7 +334,7 @@ function LiquidTabBar({ page, onChange }: { page: Page; onChange: (page: Page) =
             }`}
             onClick={() => handleTabClick(tab.page)}
           >
-            <span className="tab-icon"><TabIcon name={tab.icon} /></span>
+            <span className="tab-icon"><TabIcon name={tab.icon} filled={page === tab.page} /></span>
             <span className="sr-only">{tab.label}</span>
           </button>
         ))}
